@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ハッピー キャット バルーン アドベンチャー EX</title>
+  <style>
+    /* 全体背景：柔らかいパステルカラーのラジアルグラデーション */
+    body {
+      background: radial-gradient(circle at top, #FFDEE9, #B5FFFC);
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    /* ゲーム全体のコンテナ */
+    #game-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    /* 猫キャラクター表示エリア（サイズアップ＆ディテール強化） */
+    #character-container {
+      margin: 0 auto;
+      width: 250px;
+      height: 250px;
+      transition: transform 0.3s ease;
+    }
+    #character-container svg {
+      width: 100%;
+      height: 100%;
+    }
+    /* 踊る猫：CSSアニメーションでリズミカルに動く */
+    #character-container.dancing {
+      animation: dance 1s infinite;
+    }
+    @keyframes dance {
+      0%   { transform: translateY(0) rotate(0deg); }
+      25%  { transform: translateY(-15px) rotate(-5deg); }
+      50%  { transform: translateY(0) rotate(0deg); }
+      75%  { transform: translateY(-15px) rotate(5deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+    /* 指示文：大きめの文字に影付き */
+    #instruction {
+      font-size: 1.8em;
+      margin: 20px 0;
+      color: #333;
+      text-shadow: 2px 2px 2px rgba(255,255,255,0.5);
+    }
+    /* タイマー表示 */
+    #timer {
+      font-size: 1.5em;
+      color: #FF5733;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 1px #fff;
+    }
+    /* 正解数表示 */
+    #scoreDisplay {
+      font-size: 1.5em;
+      color: #008000;
+      margin-bottom: 10px;
+      text-shadow: 1px 1px 1px #fff;
+    }
+    /* 風船（ブロック）配置エリア */
+    #shapes-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .shape {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      margin: 10px;
+      cursor: pointer;
+      box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .shape::after {
+      content: "";
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 20px;
+      background: #555;
+    }
+    .shape:hover {
+      transform: scale(1.1);
+    }
+    .popped {
+      animation: pop 0.5s forwards;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    .result-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5em;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    /* スタートボタン */
+    #start-button {
+      font-size: 1.5em;
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    #start-button:hover {
+      background-color: #45a049;
+    }
+    /* 結果画面：ポップでキラキラ感のあるデザイン */
+    .result-container {
+      background: #fff;
+      border: 5px dashed #FF69B4;
+      border-radius: 20px;
+      padding: 20px;
+      animation: fadeIn 1s;
+      margin-top: 20px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    /* Confettiエフェクト */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      opacity: 0.8;
+      animation: confettiFall 3s linear forwards;
+    }
+    @keyframes confettiFall {
+      0% { transform: translateY(-20px) rotate(0deg); }
+      100% { transform: translateY(100vh) rotate(360deg); }
+    }
+    /* パーティクルエフェクト */
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: particleFade 1s ease-out forwards;
+      pointer-events: none;
+      z-index: 100;
+    }
+    @keyframes particleFade {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+    }
+    /* 難易度選択 */
+    .difficulty-container {
+      margin: 20px 0;
+    }
+    .difficulty-btn {
+      padding: 8px 16px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1.2em;
+      transition: all 0.2s;
+    }
+    .difficulty-btn.easy {
+      background-color: #AAFFAA;
+    }
+    .difficulty-btn.normal {
+      background-color: #FFFFAA;
+    }
+    .difficulty-btn.hard {
+      background-color: #FFAAAA;
+    }
+    .difficulty-btn.selected {
+      transform: scale(1.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    /* 音楽コントロール */
+    .music-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+    }
+    .music-button {
+      background: rgba(255,255,255,0.7);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    /* ハイスコア */
+    #highscore {
+      font-size: 1.2em;
+      color: #FF69B4;
+      margin-bottom: 10px;
+    }
+    /* スペシャルボーナス風船 */
+    .shape.special {
+      background: linear-gradient(135deg, #F9D423, #FF4E50);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 105, 180, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 105, 180, 0); }
+    }
+    /* レスポンシブデザイン */
+    @media (max-width: 600px) {
+      #character-container {
+        width: 180px;
+        height: 180px;
+      }
+      .shape {
+        width: 70px;
+        height: 70px;
+        margin: 5px;
+      }
+      #instruction {
+        font-size: 1.4em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="music-controls">
+    <button id="music-toggle" class="music-button">🔊</button>
+  </div>
+  
+  <div id="game-container">
+    <!-- 猫キャラクター表示エリア -->
+    <div id="character-container"></div>
+    
+    <!-- ハイスコア表示 -->
+    <div id="highscore"></div>
+    
+    <!-- 現在の正解数表示 -->
+    <div id="scoreDisplay">正解数：0</div>
+    
+    <!-- 指示文 -->
+    <h1 id="instruction">「スタート」ボタンをタッチしてね！</h1>
+    
+    <!-- タイマー表示 -->
+    <div id="timer"></div>
+    
+    <!-- 難易度選択 -->
+    <div class="difficulty-container">
+      <button class="difficulty-btn easy selected" data-difficulty="easy">かんたん</button>
+      <button class="difficulty-btn normal" data-difficulty="normal">ふつう</button>
+      <button class="difficulty-btn hard" data-difficulty="hard">むずかしい</button>
+    </div>
+    
+    <!-- 風船（ブロック）配置エリア -->
+    <div id="shapes-container"></div>
+    
+    <!-- ゲームスタートボタン -->
+    <button id="start-button">スタート</button>
+  </div>
+  
+  <!-- BGM（ループ再生） -->
+  <audio id="bgm" loop>
+    <source src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptitle=Sunshine&filename=nj/NjQwNTYzNzg3_mRBVQfQKcrE.mp3" type="audio/mp3">
+  </audio>
+  
+  <script>
+    /***************************************************
+     * 究極の可愛い猫キャラクター（SVG＋アニメーション）
+     * (ニュートラル／笑顔／泣き顔／踊る)
+     ***************************************************/
+    // ニュートラルな猫キャラクター（さらに丸く、ブラー・チーク、ハート型の鼻＆リボタイ付き）
+    const catNeutralSVG = `
+<svg viewBox="0 0 250 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="catFaceGradientUltimate" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE4B5"/>
+      <stop offset="100%" stop-color="#FFDAB9"/>
+    </radialGradient>
+    <filter id="catShadowUltimate" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <style>
+      .blink { animation: blink 5s infinite; }
+      @keyframes blink { 0%,95%,100% { opacity: 1; } 97% { opacity: 0; } }
+    </style>
+  </defs>
+  <!-- Ears -->
+  <path d="M60,80 Q80,30 100,80" fill="url(#catFaceGradientUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowUltimate)"/>
+  <path d="M150,80 Q170,30 190,80" fill="url(#catFaceGradientUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowUltimate)"/>
+  <!-- Face -->
+  <circle cx="125" cy="140" r="60" fill="url(#catFaceGradientUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowUltimate)"/>
+  <!-- Eyes -->
+  <ellipse cx="95" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowUltimate)"/>
+  <ellipse cx="155" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowUltimate)"/>
+  <circle class="blink" cx="95" cy="130" r="6" fill="#000"/>
+  <circle class="blink" cx="155" cy="130" r="6" fill="#000"/>
+  <!-- Blush（ほっぺた） -->
+  <circle cx="75" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <circle cx="175" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <!-- Nose（ハート型） -->
+  <path d="M125,145 
+           C120,140, 115,140, 115,145 
+           C115,150, 125,160, 125,160 
+           C125,160, 135,150, 135,145 
+           C135,140, 130,140, 125,145 Z" fill="#FF6B6B" stroke="#000" stroke-width="2" filter="url(#catShadowUltimate)"/>
+  <!-- Mouth（小さなスマイル） -->
+  <path d="M110,165 Q125,175 140,165" stroke="#000" stroke-width="2" fill="none" filter="url(#catShadowUltimate)"/>
+  <!-- Whiskers -->
+  <line x1="60" y1="145" x2="110" y2="150" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="155" x2="110" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="165" x2="110" y2="160" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="150" x2="190" y2="145" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="155" x2="190" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="160" x2="190" y2="165" stroke="#000" stroke-width="2"/>
+  <!-- Bow Tie（リボタイ） -->
+  <rect x="105" y="165" width="40" height="15" fill="#FF69B4" stroke="#000" stroke-width="2" rx="5" ry="5" filter="url(#catShadowUltimate)"/>
+  <text x="125" y="177" text-anchor="middle" font-size="10" fill="#fff">❤</text>
+</svg>
+    `;
+    // 笑顔の猫キャラクター（大きなスマイル）
+    const catSmileSVG = `
+<svg viewBox="0 0 250 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="catFaceGradientSmileUltimate" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE4B5"/>
+      <stop offset="100%" stop-color="#FFDAB9"/>
+    </radialGradient>
+    <filter id="catShadowSmileUltimate" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <style>
+      .blink { animation: blink 5s infinite; }
+      @keyframes blink { 0%,95%,100% { opacity: 1; } 97% { opacity: 0; } }
+    </style>
+  </defs>
+  <!-- Ears -->
+  <path d="M60,80 Q80,30 100,80" fill="url(#catFaceGradientSmileUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSmileUltimate)"/>
+  <path d="M150,80 Q170,30 190,80" fill="url(#catFaceGradientSmileUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSmileUltimate)"/>
+  <!-- Face -->
+  <circle cx="125" cy="140" r="60" fill="url(#catFaceGradientSmileUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSmileUltimate)"/>
+  <!-- Eyes -->
+  <ellipse cx="95" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowSmileUltimate)"/>
+  <ellipse cx="155" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowSmileUltimate)"/>
+  <circle class="blink" cx="95" cy="130" r="6" fill="#000"/>
+  <circle class="blink" cx="155" cy="130" r="6" fill="#000"/>
+  <!-- Blush -->
+  <circle cx="75" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <circle cx="175" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <!-- Nose（ハート型） -->
+  <path d="M125,145 
+           C120,140, 115,140, 115,145 
+           C115,150, 125,165, 125,165 
+           C125,165, 135,150, 135,145 
+           C135,140, 130,140, 125,145 Z" fill="#FF6B6B" stroke="#000" stroke-width="2" filter="url(#catShadowSmileUltimate)"/>
+  <!-- 大きなスマイル -->
+  <path d="M110,165 Q125,195 140,165" stroke="#000" stroke-width="2" fill="none" filter="url(#catShadowSmileUltimate)"/>
+  <!-- Whiskers -->
+  <line x1="60" y1="145" x2="110" y2="150" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="155" x2="110" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="165" x2="110" y2="160" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="150" x2="190" y2="145" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="155" x2="190" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="160" x2="190" y2="165" stroke="#000" stroke-width="2"/>
+  <!-- Bow Tie -->
+  <rect x="105" y="165" width="40" height="15" fill="#FF69B4" stroke="#000" stroke-width="2" rx="5" ry="5" filter="url(#catShadowSmileUltimate)"/>
+  <text x="125" y="177" text-anchor="middle" font-size="10" fill="#fff">❤</text>
+</svg>
+    `;
+    // 泣き顔の猫キャラクター（しかめっ面＋涙）
+    const catCrySVG = `
+<svg viewBox="0 0 250 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="catFaceGradientCryUltimate" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE4B5"/>
+      <stop offset="100%" stop-color="#FFDAB9"/>
+    </radialGradient>
+    <filter id="catShadowCryUltimate" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <style>
+      .blink { animation: blink 5s infinite; }
+      @keyframes blink { 0%,95%,100% { opacity: 1; } 97% { opacity: 0; } }
+    </style>
+  </defs>
+  <!-- Ears -->
+  <path d="M60,80 Q80,30 100,80" fill="url(#catFaceGradientCryUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowCryUltimate)"/>
+  <path d="M150,80 Q170,30 190,80" fill="url(#catFaceGradientCryUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowCryUltimate)"/>
+  <!-- Face -->
+  <circle cx="125" cy="140" r="60" fill="url(#catFaceGradientCryUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowCryUltimate)"/>
+  <!-- Eyes -->
+  <ellipse cx="95" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowCryUltimate)"/>
+  <ellipse cx="155" cy="130" rx="12" ry="16" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowCryUltimate)"/>
+  <circle class="blink" cx="95" cy="130" r="6" fill="#000"/>
+  <circle class="blink" cx="155" cy="130" r="6" fill="#000"/>
+  <!-- Blush -->
+  <circle cx="75" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <circle cx="175" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <!-- Nose -->
+  <path d="M125,145 
+           C120,140, 115,140, 115,145 
+           C115,150, 125,160, 125,160 
+           C125,160, 135,150, 135,145 
+           C135,140, 130,140, 125,145 Z" fill="#FF6B6B" stroke="#000" stroke-width="2" filter="url(#catShadowCryUltimate)"/>
+  <!-- しかめっ面の口 -->
+  <path d="M110,170 Q125,155 140,170" stroke="#000" stroke-width="2" fill="none" filter="url(#catShadowCryUltimate)"/>
+  <!-- 涙 -->
+  <circle cx="95" cy="140" r="6" fill="#00BFFF" opacity="0.7"/>
+  <circle cx="155" cy="140" r="6" fill="#00BFFF" opacity="0.7"/>
+  <!-- Whiskers -->
+  <line x1="60" y1="145" x2="110" y2="150" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="155" x2="110" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="165" x2="110" y2="160" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="150" x2="190" y2="145" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="155" x2="190" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="160" x2="190" y2="165" stroke="#000" stroke-width="2"/>
+  <!-- Bow Tie -->
+  <rect x="105" y="165" width="40" height="15" fill="#FFC0CB" stroke="#000" stroke-width="2" rx="5" ry="5" filter="url(#catShadowCryUltimate)"/>
+  <text x="125" y="177" text-anchor="middle" font-size="10" fill="#fff">❤</text>
+</svg>
+    `;
+    
+    // 驚きの猫キャラクター（目が大きく、口がO型）
+    const catSurpriseSVG = `
+<svg viewBox="0 0 250 250" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="catFaceGradientSurpriseUltimate" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE4B5"/>
+      <stop offset="100%" stop-color="#FFDAB9"/>
+    </radialGradient>
+    <filter id="catShadowSurpriseUltimate" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Ears -->
+  <path d="M60,80 Q80,30 100,80" fill="url(#catFaceGradientSurpriseUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSurpriseUltimate)"/>
+  <path d="M150,80 Q170,30 190,80" fill="url(#catFaceGradientSurpriseUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSurpriseUltimate)"/>
+  <!-- Face -->
+  <circle cx="125" cy="140" r="60" fill="url(#catFaceGradientSurpriseUltimate)" stroke="#000" stroke-width="3" filter="url(#catShadowSurpriseUltimate)"/>
+  <!-- Eyes (Very Big) -->
+  <ellipse cx="95" cy="130" rx="14" ry="20" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowSurpriseUltimate)"/>
+  <ellipse cx="155" cy="130" rx="14" ry="20" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowSurpriseUltimate)"/>
+  <circle cx="95" cy="130" r="8" fill="#000"/>
+  <circle cx="155" cy="130" r="8" fill="#000"/>
+  <!-- Blush -->
+  <circle cx="75" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <circle cx="175" cy="150" r="8" fill="pink" opacity="0.7"/>
+  <!-- Nose（ハート型） -->
+  <path d="M125,145 
+           C120,140, 115,140, 115,145 
+           C115,150, 125,160, 125,160 
+           C125,160, 135,150, 135,145 
+           C135,140, 130,140, 125,145 Z" fill="#FF6B6B" stroke="#000" stroke-width="2" filter="url(#catShadowSurpriseUltimate)"/>
+  <!-- O型の口 -->
+  <circle cx="125" cy="175" r="10" fill="#fff" stroke="#000" stroke-width="2" filter="url(#catShadowSurpriseUltimate)"/>
+  <!-- Whiskers -->
+  <line x1="60" y1="145" x2="110" y2="150" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="155" x2="110" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="60" y1="165" x2="110" y2="160" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="150" x2="190" y2="145" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="155" x2="190" y2="155" stroke="#000" stroke-width="2"/>
+  <line x1="140" y1="160" x2="190" y2="165" stroke="#000" stroke-width="2"/>
+  <!-- Bow Tie -->
+  <rect x="105" y="165" width="40" height="15" fill="#FF69B4" stroke="#000" stroke-width="2" rx="5" ry="5" filter="url(#catShadowSurpriseUltimate)"/>
+  <text x="125" y="177" text-anchor="middle" font-size="10" fill="#fff">❤</text>
+</svg>
+    `;
+    
+    // キャラクターの表情更新（'dance'の場合は踊るアニメーションを追加）
+    function updateCat(expression) {
+      const container = document.getElementById('character-container');
+      container.classList.remove('dancing');
+      if(expression === 'smile'){
+        container.innerHTML = catSmileSVG;
+      } else if(expression === 'cry'){
+        container.innerHTML = catCrySVG;
+      } else if(expression === 'dance'){
+        container.innerHTML = catSmileSVG;
+        container.classList.add('dancing');
+      } else if(expression === 'surprise'){
+        container.innerHTML = catSurpriseSVG;
+      } else {
+        container.innerHTML = catNeutralSVG;
+      }
+    }
+    updateCat('neutral');
+    
+    /******************************
+     * ゲーム用変数・設定
+     ******************************/
+    const COLORS = [
+      { name: 'red',      label: '赤い',     code: '#FF5555' },
+      { name: 'blue',     label: '青い',     code: '#5555FF' },
+      { name: 'yellow',   label: '黄色い',   code: '#FFFF55' },
+      { name: 'green',    label: '緑の',     code: '#55FF55' },
+      { name: 'purple',   label: '紫の',     code: '#AA55FF' },
+      { name: 'orange',   label: 'オレンジの', code: '#FFAA55' },
+      { name: 'pink',     label: 'ピンクの',  code: '#FF55AA' },
+      { name: 'cyan',     label: '水色の',    code: '#55FFFF' }
+    ];
+    
+    // 効果音（オンライン音源に変更）
+    const correctSound = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3');
+    const incorrectSound = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    const applauseSound = new Audio('https://www.soundjay.com/human/sounds/applause-01.mp3');
+    const bonusSound = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
+    
+    // ゲーム変数
+    const shapesContainer = document.getElementById('shapes-container');
+    const instructionEl = document.getElementById('instruction');
+    const timerEl = document.getElementById('timer');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const highscoreEl = document.getElementById('highscore');
+    const startButton = document.getElementById('start-button');
+    const bgmAudio = document.getElementById('bgm');
+    const musicToggle = document.getElementById('music-toggle');
+    
+    let targetColor = null;
+    let answered = false;
+    let roundNumber = 0;
+    let score = 0;
+    let highScore = localStorage.getItem('catBalloonHighScore') || 0;
+    let timerID = null;
+    let countDownInterval = null;
+    let currentDifficulty = 'easy';
+    let bonusRound = false;
+    let isMusicPlaying = false;
+    
+    // 難易度に関する設定
+    const difficultySettings = {
+      easy: {
+        timeLimit: 8,
+        balloonCount: 4,
+        colorsToUse: 4,  // 使用する色の数
+        bonusChance: 0.3 // ボーナスラウンド出現確率
+      },
+      normal: {
+        timeLimit: 6,
+        balloonCount: 6,
+        colorsToUse: 6,
+        bonusChance: 0.2
+      },
+      hard: {
+        timeLimit: 4,
+        balloonCount: 8,
+        colorsToUse: 8,
+        bonusChance: 0.1
+      }
+    };
+    
+    // ハイスコア表示
+    highscoreEl.textContent = "ハイスコア: " + highScore;
+    
+    // BGM操作
+    musicToggle.addEventListener('click', function() {
+      if (isMusicPlaying) {
+        bgmAudio.pause();
+        musicToggle.textContent = '🔈';
+        isMusicPlaying = false;
+      } else {
+        bgmAudio.play();
+        musicToggle.textContent = '🔊';
+        isMusicPlaying = true;
+      }
+    });
+    
+    // 難易度選択
+    const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+    difficultyBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        // 以前の選択を解除
+        difficultyBtns.forEach(b => b.classList.remove('selected'));
+        // 新しい選択をハイライト
+        this.classList.add('selected');
+        currentDifficulty = this.dataset.difficulty;
+      });
+    });
+    
+    // 音声読み上げ（既存の音声停止＋1.5倍速）
+    function speak(text) {
+      if('speechSynthesis' in window){
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.5;
+        utterance.pitch = 1;
+        utterance.lang = 'ja-JP';
+        speechSynthesis.speak(utterance);
+      }
+    }
+    
+    // 残り時間のカウントダウン開始
+    function startCountdown() {
+      let timeLeft = difficultySettings[currentDifficulty].timeLimit;
+      timerEl.textContent = "残り時間: " + timeLeft + "秒";
+      countDownInterval = setInterval(() => {
+        timeLeft--;
+        if(timeLeft >= 0){
+          timerEl.textContent = "残り時間: " + timeLeft + "秒";
+        }
+        if(timeLeft <= 0){
+          clearInterval(countDownInterval);
+        }
+      }, 1000);
+    }
+    
+    // タイマー開始
+    function startTimer() {
+      startCountdown();
+      timerID = setTimeout(() => {
+        if(!answered){
+          instructionEl.textContent = "時間切れ！";
+          speak("時間切れ！");
+          updateCat('cry');
+          clearInterval(countDownInterval);
+          setTimeout(nextRound, 1000);
+        }
+      }, difficultySettings[currentDifficulty].timeLimit * 1000);
+    }
+    
+    // パーティクルエフェクト
+    function createParticles(x, y, color) {
+      const particleCount = 15;
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.style.backgroundColor = color;
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
+        
+        // ランダムな方向と距離
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 50 + Math.random() * 100;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
+        
+        document.body.appendChild(particle);
+        
+        // パーティクルの削除
+        setTimeout(() => {
+          particle.remove();
+        }, 1000);
+      }
+    }
+    
+    // 次の問題へ（全5問終了でゲーム終了）
+    function nextRound() {
+      clearTimeout(timerID);
+      clearInterval(countDownInterval);
+      
+      // ボーナスラウンドのチェック
+      const shouldShowBonus = !bonusRound && 
+                           roundNumber > 0 && 
+                           roundNumber % 3 === 0 && 
+                           Math.random() < difficultySettings[currentDifficulty].bonusChance;
+      
+      if (shouldShowBonus) {
+        bonusRound = true;
+        startBonusRound();
+        return;
+      }
+      
+      bonusRound = false;
+      roundNumber++;
+      
+      if(roundNumber > 5){
+        endGame();
+        return;
+      }
+      
+      updateCat('neutral');
+      shapesContainer.innerHTML = '';
+      answered = false;
+      scoreDisplay.textContent = "正解数：" + score;
+      
+      // 現在の難易度設定を使用
+      const settings = difficultySettings[currentDifficulty];
+      const availableColors = COLORS.slice(0, settings.colorsToUse);
+      const randomIndex = Math.floor(Math.random() * availableColors.length);
+      targetColor = availableColors[randomIndex];
+      
+      const displayInstruction = targetColor.label + "風船をタッチしてね！（" + roundNumber + " / 5）";
+      const speakInstruction = targetColor.label + "風船をタッチしてね！";
+      instructionEl.textContent = displayInstruction;
+      speak(speakInstruction);
+      
+      const shapeCount = settings.balloonCount;
+      const correctShapeIndex = Math.floor(Math.random() * shapeCount);
+      
+      for(let i = 0; i < shapeCount; i++) {
+        const shape = document.createElement('div');
+        shape.classList.add('shape');
+        
+        let shapeColor;
+        if(i === correctShapeIndex){
+          shapeColor = targetColor.code;
+        } else {
+          const otherColors = availableColors.filter(c => c.name !== targetColor.name);
+          const randomOther = otherColors[Math.floor(Math.random() * otherColors.length)];
+          shapeColor = randomOther.code;
+        }
+        
+        shape.style.backgroundColor = shapeColor;
+        
+        shape.addEventListener('click', function(e){
+          if(shape.classList.contains('popped')) return;
+          if(answered) return;
+          
+          // 風船を押した位置にパーティクルエフェクト
+          const rect = shape.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          createParticles(x, y, shapeColor);
+          
+          const isCorrect = (i === correctShapeIndex);
+          const mark = document.createElement('span');
+          mark.classList.add('result-mark');
+          mark.textContent = isCorrect ? "○" : "×";
+          shape.appendChild(mark);
+          shape.classList.add('popped');
+          
+          if(isCorrect){
+            correctSound.currentTime = 0;
+            correctSound.play();
+          } else {
+            incorrectSound.currentTime = 0;
+            incorrectSound.play();
+          }
+          
+          if(isCorrect){
+            answered = true;
+            score++;
+            instructionEl.textContent = "グッドジョブ！";
+            speak("グッドジョブ！");
+            updateCat('smile');
+            clearTimeout(timerID);
+            clearInterval(countDownInterval);
+            setTimeout(nextRound, 1000);
+          } else {
+            instructionEl.textContent = "もう一度、" + targetColor.label + "風船をタッチしてね！";
+            speak("もう一度、" + targetColor.label + "風船をタッチしてね！");
+            updateCat('cry');
+            setTimeout(() => { if(!answered) updateCat('neutral'); }, 1000);
+            setTimeout(() => { shape.remove(); }, 700);
+          }
+        });
+        
+        shapesContainer.appendChild(shape);
+      }
+      
+      startTimer();
+    }
+    
+    // ボーナスラウンド
+    function startBonusRound() {
+      updateCat('surprise');
+      shapesContainer.innerHTML = '';
+      answered = false;
+      
+      instructionEl.textContent = "ボーナスラウンド！すべての風船をタッチしてね！";
+      speak("ボーナスラウンド！すべての風船をタッチしてね！");
+      
+      bonusSound.currentTime = 0;
+      bonusSound.play();
+      
+      const shapeCount = 5; // ボーナス風船の数
+      let poppedCount = 0;
+      
+      for(let i = 0; i < shapeCount; i++) {
+        const shape = document.createElement('div');
+        shape.classList.add('shape', 'special');
+        
+        // ランダムな色とサイズ
+        const colorIndex = Math.floor(Math.random() * COLORS.length);
+        const shapeColor = COLORS[colorIndex].code;
+        shape.style.backgroundColor = shapeColor;
+        
+        // サイズをランダムに調整
+        const size = 70 + Math.floor(Math.random() * 40);
+        shape.style.width = size + 'px';
+        shape.style.height = size + 'px';
+        
+        shape.addEventListener('click', function(e){
+          if(shape.classList.contains('popped')) return;
+          
+          // 風船を押した位置にパーティクルエフェクト
+          const rect = shape.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          createParticles(x, y, shapeColor);
+          
+          shape.classList.add('popped');
+          correctSound.currentTime = 0;
+          correctSound.play();
+          
+          poppedCount++;
+          score++; // 各風船につき1点
+          scoreDisplay.textContent = "正解数：" + score;
+          
+          if(poppedCount >= shapeCount) {
+            // すべての風船をポップしたら次のラウンドへ
+            instructionEl.textContent = "すごい！ボーナスコンプリート！";
+            speak("すごい！ボーナスコンプリート！");
+            updateCat('dance');
+            setTimeout(() => {
+              nextRound();
+            }, 1500);
+          }
+        });
+        
+        shapesContainer.appendChild(shape);
+      }
+    }
+    
+    // ゲーム終了時の処理
+    function endGame() {
+      clearTimeout(timerID);
+      clearInterval(countDownInterval);
+      shapesContainer.innerHTML = '';
+      timerEl.textContent = '';
+      
+      // ハイスコア更新
+      if(score > highScore) {
+        highScore = score;
+        localStorage.setItem('catBalloonHighScore', highScore);
+        highscoreEl.textContent = "ハイスコア: " + highScore;
+      }
+      
+      const resultContainer = document.createElement('div');
+      resultContainer.classList.add('result-container');
+      
+      let resultMessage;
+      if(score <= 3) {
+        resultMessage = "がんばったね！";
+      } else if(score <= 6) {
+        resultMessage = "すごいね！";
+      } else if(score <= 9) {
+        resultMessage = "とってもすごい！";
+      } else {
+        resultMessage = "天才的！！";
+      }
+      
+      resultContainer.innerHTML = `
+        <h1>おしまい！</h1>
+        <p>${resultMessage} あなたは ${score} 問正解したよ！</p>
+        <p>${score > highScore ? "新記録達成！" : "次はもっと頑張ろうね！"}</p>
+        <button id="play-again" style="font-size: 1.2em; padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;">もう一度遊ぶ</button>
+      `;
+      
+      difficultyBtns.forEach(btn => {
+        btn.style.display = "none";
+      });
+      
+      startButton.style.display = "none";
+      instructionEl.style.display = "none";
+      document.getElementById('game-container').appendChild(resultContainer);
+      
+      updateCat('dance');
+      speak("おつかれさま！" + resultMessage);
+      applauseSound.currentTime = 0;
+      applauseSound.play();
+      showConfetti();
+      
+      // もう一度プレイボタン
+      document.getElementById('play-again').addEventListener('click', function() {
+        location.reload();
+      });
+    }
+    
+    // Confettiエフェクト
+    function showConfetti() {
+      const colors = ['#FFC107', '#FF5722', '#8BC34A', '#03A9F4', '#E91E63', '#9C27B0', '#FFEB3B'];
+      const confettiCount = 150;
+      
+      for(let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = Math.random() * window.innerWidth + 'px';
+        confetti.style.top = -20 + 'px';
+        
+        // サイズをちょっとランダムに
+        const size = 5 + Math.random() * 10;
+        confetti.style.width = size + 'px';
+        confetti.style.height = size + 'px';
+        
+        // 形をランダムに（円か四角）
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        
+        const duration = 3 + Math.random() * 3;
+        confetti.style.animationDuration = duration + 's';
+        
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => {
+          confetti.remove();
+        }, duration * 1000);
+      }
+    }
+    
+    // ゲームスタート
+    startButton.addEventListener('click', function() {
+      startButton.style.display = "none";
+      // 難易度選択を非表示
+      difficultyBtns.forEach(btn => {
+        btn.style.display = "none";
+      });
+      
+      // BGM開始
+      if (bgmAudio.paused) {
+        bgmAudio.volume = 0.5;
+        bgmAudio.play()
+          .then(() => {
+            isMusicPlaying = true;
+            musicToggle.textContent = '🔊';
+          })
+          .catch(error => {
+            console.log("BGM playback prevented by browser: ", error);
+          });
+      }
+      
+      nextRound();
+    });
+  </script>
+</body>
+</html>
